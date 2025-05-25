@@ -1,0 +1,84 @@
+{
+    "cards": [
+        {
+            "id": 1,
+            "title": "Active Listening Mastery",
+            "content": "Practice active listening by:\n\n1. Using verbal acknowledgments ('I understand', 'I see')\n2. Reflecting back key points\n3. Asking clarifying questions\n4. Avoiding interrupting\n\nToday's Exercise: In your next customer interaction, try to summarize their main points before responding.",
+            "skill": "Communication",
+            "difficulty": "Beginner",
+            "tags": ["listening", "communication", "customer-interaction"]
+        },
+        {
+            "id": 2,
+            "title": "Empathy in Customer Service",
+            "content": "Develop empathy by:\n\n1. Acknowledging customer emotions\n2. Using empathetic language ('I understand how frustrating this must be')\n3. Validating their concerns\n4. Offering personalized solutions\n\nToday's Exercise: Practice responding to an angry customer with empathy, focusing on their emotional needs first.",
+            "skill": "Emotional Intelligence",
+            "difficulty": "Intermediate",
+            "tags": ["empathy", "emotional-intelligence", "customer-service"]
+        },
+        {
+            "id": 3,
+            "title": "Effective Problem Resolution",
+            "content": "Master problem-solving by:\n\n1. Gathering all relevant information\n2. Breaking down complex issues\n3. Proposing clear solutions\n4. Following up on resolution\n\nToday's Exercise: Roleplay a complex customer issue and practice the step-by-step resolution process.",
+            "skill": "Problem Solving",
+            "difficulty": "Intermediate",
+            "tags": ["problem-solving", "resolution", "customer-service"]
+        },
+        {
+            "id": 4,
+            "title": "Professional Tone & Language",
+            "content": "Perfect your professional communication by:\n\n1. Using positive language\n2. Maintaining appropriate tone\n3. Avoiding jargon\n4. Being clear and concise\n\nToday's Exercise: Record yourself handling a customer call and analyze your tone and language choices.",
+            "skill": "Communication",
+            "difficulty": "Beginner",
+            "tags": ["tone", "language", "professionalism"]
+        },
+        {
+            "id": 5,
+            "title": "Handling Customer Objections",
+            "content": "Learn to handle objections by:\n\n1. Listening without interrupting\n2. Acknowledging the concern\n3. Providing evidence-based responses\n4. Offering alternatives\n\nToday's Exercise: Practice responding to common customer objections using the LAER method (Listen, Acknowledge, Explore, Respond).",
+            "skill": "Sales & Negotiation",
+            "difficulty": "Advanced",
+            "tags": ["objections", "negotiation", "customer-service"]
+        },
+        {
+            "id": 6,
+            "title": "Time Management in Customer Service",
+            "content": "Optimize your time by:\n\n1. Prioritizing urgent issues\n2. Using templates for common responses\n3. Setting clear time boundaries\n4. Managing multiple conversations effectively\n\nToday's Exercise: Track your response times and identify areas for improvement.",
+            "skill": "Productivity",
+            "difficulty": "Intermediate",
+            "tags": ["time-management", "productivity", "efficiency"]
+        },
+        {
+            "id": 7,
+            "title": "Cultural Sensitivity",
+            "content": "Enhance cultural awareness by:\n\n1. Learning about different communication styles\n2. Being mindful of cultural differences\n3. Using inclusive language\n4. Adapting your approach as needed\n\nToday's Exercise: Research and practice appropriate greetings and communication styles for different cultures.",
+            "skill": "Cultural Intelligence",
+            "difficulty": "Intermediate",
+            "tags": ["cultural-awareness", "diversity", "inclusion"]
+        },
+        {
+            "id": 8,
+            "title": "Conflict Resolution",
+            "content": "Master conflict resolution by:\n\n1. Staying calm under pressure\n2. Identifying the root cause\n3. Finding common ground\n4. Reaching mutually beneficial solutions\n\nToday's Exercise: Roleplay a difficult customer situation and practice de-escalation techniques.",
+            "skill": "Conflict Management",
+            "difficulty": "Advanced",
+            "tags": ["conflict-resolution", "de-escalation", "customer-service"]
+        },
+        {
+            "id": 9,
+            "title": "Product Knowledge Excellence",
+            "content": "Deepen your product knowledge by:\n\n1. Regular review of product updates\n2. Understanding common use cases\n3. Knowing troubleshooting steps\n4. Staying updated on industry trends\n\nToday's Exercise: Create a quick-reference guide for your most common product questions.",
+            "skill": "Product Knowledge",
+            "difficulty": "Intermediate",
+            "tags": ["product-knowledge", "expertise", "customer-service"]
+        },
+        {
+            "id": 10,
+            "title": "Building Customer Rapport",
+            "content": "Build strong customer relationships by:\n\n1. Finding common ground\n2. Remembering customer preferences\n3. Following up on previous interactions\n4. Showing genuine interest\n\nToday's Exercise: Practice building rapport in your next three customer interactions.",
+            "skill": "Relationship Building",
+            "difficulty": "Beginner",
+            "tags": ["rapport", "relationships", "customer-service"]
+        }
+    ]
+} 
