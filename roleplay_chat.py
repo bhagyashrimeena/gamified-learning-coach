@@ -1,6 +1,7 @@
 import streamlit as st
-from llm_utils import query_ollama, check_model_availability
+from llm_utils import query_ollama, check_model_installed, MODEL_NAME
 from datetime import datetime
+from voice_utils import handle_voice_input, initialize_voice_state
 
 def initialize_roleplay_session():
     """Initialize session state variables for roleplay chat"""
@@ -16,6 +17,12 @@ def initialize_roleplay_session():
         st.session_state.show_suggestions = False
     if "customer_satisfied" not in st.session_state:
         st.session_state.customer_satisfied = False
+    if "scenario_input" not in st.session_state:
+        st.session_state.scenario_input = ""
+    if "agent_input" not in st.session_state:
+        st.session_state.agent_input = ""
+    if "reset_requested" not in st.session_state:
+        st.session_state.reset_requested = False
 
 def get_last_customer_message():
     """Get the most recent customer message from the conversation"""
@@ -72,55 +79,29 @@ def generate_next_customer_message(conversation, agent_response):
         elif msg["role"] == "agent":
             context += f"GroMo Partner: {msg['content']}\n"
     
-    prompt = f"""CRITICAL INSTRUCTION: You are a REAL CUSTOMER with a problem. You are NOT GroMo, NOT a support agent, and NOT an employee.
+    prompt = f'''You are a real customer, not a bot or a support agent.
 
-You are a regular person who applied for a financial product through GroMo and is having an issue. You are frustrated, confused, or concerned about your application.
-
-IMPORTANT RULES:
-1. NEVER use formal business language
-2. NEVER write as if you are from GroMo
-3. NEVER include signatures, titles, or corporate phrases
-4. NEVER use phrases like "Dear valued customer", "as per our records", or "we appreciate your patience"
-5. NEVER include links or contact information
-6. NEVER apologize for delays (you are the customer, not the company)
-7. NEVER use corporate jargon or formal language
-
-Your message MUST:
-- Start with casual greetings like "Hey" or "Hi"
-- Be written in simple, everyday language
-- Express your specific problem or concern
-- Be 2-4 sentences maximum
-- Show natural emotion (frustration, confusion, etc.)
-- Ask for help directly
+You are speaking casually about a real problem you are facing related to a financial product (credit card, loan, insurance etc).
 
 Previous conversation:
 {context}
 
 GroMo Partner's latest response: {agent_response}
 
-Continue the conversation as the customer. Write EXACTLY like these examples:
+CRITICAL INSTRUCTIONS:
+• Speak casually and simply
+• Do not use any formal or business language
+• Never act like GroMo or an agent
+• Show mild frustration, confusion, or concern
+• Use real-life language like: "hey", "hi", "what's going on?", "this is so annoying", etc.
+• Write only 2-4 lines MAXIMUM
 
-✅ GOOD EXAMPLES (USE THESE STYLES):
-"Hey, I applied for a credit card 5 days ago but haven't heard anything yet. Can you check what's going on?"
-
-"Hi, I'm getting really worried. The loan amount in the app shows ₹50,000 but I was promised ₹75,000. What happened?"
-
-"I'm still confused about the insurance coverage. Can you explain it in simpler terms? The terms and conditions are too complicated."
-
-❌ BAD EXAMPLES (NEVER USE THESE):
-"Dear valued customer, we are processing your application..."
-"As per our records, your application is under review..."
-"We appreciate your patience during this process..."
-"Best regards, [Your Name], Head of Customer Service"
-"I am writing to inform you about the status of your application..."
-"Please be advised that your request is being processed..."
-
-Remember: You are a REAL CUSTOMER with a problem. You are NOT GroMo or a support agent. Write like a normal person would talk to a customer service agent."""
+Start now:'''
 
     try:
         response = query_ollama(
             prompt=prompt,
-            model="tinyllama:latest",
+            model=MODEL_NAME,
             temperature=0.7
         )
         return response["text"]
@@ -130,7 +111,7 @@ Remember: You are a REAL CUSTOMER with a problem. You are NOT GroMo or a support
 
 def generate_feedback(customer_message, agent_response):
     """Generate specific, actionable feedback on the agent's response"""
-    feedback_prompt = f"""You are a customer service training evaluator for GroMo Partners.
+    feedback_prompt = f'''You are a customer service training evaluator for GroMo Partners.
 Evaluate the partner's response to the customer's message about financial products.
 Provide specific, actionable feedback that helps the partner improve their skills.
 
@@ -173,12 +154,12 @@ Keep the feedback:
 - Specific to financial product support
 - Focused on practical improvements
 - Clear and actionable
-- Appropriate for a learning partner"""
+- Appropriate for a learning partner'''
 
     try:
         feedback = query_ollama(
             prompt=feedback_prompt,
-            model="tinyllama:latest",
+            model=MODEL_NAME,
             temperature=0.7
         )
         return feedback["text"]
@@ -188,218 +169,53 @@ Keep the feedback:
 
 def roleplay_chat():
     """Display the roleplay chat interface"""
-    # 👋 Greeting and Instructions
-    st.markdown("""
-        # 🎭 GroMo Partner Training Simulator
-        
-        Welcome! 🌟 Practice handling real-world customer service scenarios for financial products.
-        You'll roleplay as a GroMo Partner helping customers with their financial product concerns.
-        After each response, you'll receive feedback to improve your skills.
-        
-        ---
-    """)
+    st.header("💬 Roleplay Practice")
     
-    # Initialize session state
-    initialize_roleplay_session()
-    
-    # Check if Ollama is available
-    if not check_model_availability("tinyllama:latest"):
-        st.error("❌ TinyLlama model is not available. Please ensure Ollama is running and the model is pulled.")
-        st.info("To install TinyLlama, run: `ollama pull tinyllama`")
-        return
-    
-    # 📋 Scenario Setup
-    if not st.session_state.conversation_active:
-        st.markdown("### 📋 Start a New Scenario")
-        st.markdown("""
-            Choose a scenario or describe your own:
-            - Customer hasn't received credit card after 5 days
-            - Loan amount shown is different from promised
-            - Insurance policy details are unclear
-            - Welcome kit hasn't arrived
-            - Commission calculation seems incorrect
-        """)
-        
+    # Initialize chat history in session state if it doesn't exist
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Scenario selection
+    with st.expander("Select a Scenario", expanded=True):
         scenario = st.text_area(
-            "Describe the customer's concern:",
-            placeholder="Example: A customer is worried because their credit card application hasn't been processed after 5 days...",
-            key="scenario_input"
+            "Enter your scenario or choose from predefined ones:",
+            value="Customer: I'm interested in learning about life insurance options.",
+            height=100
         )
         
-        if st.button("Start Simulation", use_container_width=True):
-            if scenario:
-                # Generate initial customer response
-                system_prompt = """CRITICAL INSTRUCTION: You are a REAL CUSTOMER with a problem. You are NOT GroMo, NOT a support agent, and NOT an employee.
+        # Add predefined scenarios
+        if st.button("Load Sample Scenario"):
+            scenario = "Customer: I'm concerned about my family's financial security. Can you explain how life insurance works?"
+            st.experimental_rerun()
 
-You are a regular person who applied for a financial product through GroMo and is having an issue. You are frustrated, confused, or concerned about your application.
-
-IMPORTANT RULES:
-1. NEVER use formal business language
-2. NEVER write as if you are from GroMo
-3. NEVER include signatures, titles, or corporate phrases
-4. NEVER use phrases like "Dear valued customer", "as per our records", or "we appreciate your patience"
-5. NEVER include links or contact information
-6. NEVER apologize for delays (you are the customer, not the company)
-7. NEVER use corporate jargon or formal language
-
-Your message MUST:
-- Start with casual greetings like "Hey" or "Hi"
-- Be written in simple, everyday language
-- Express your specific problem or concern
-- Be 2-4 sentences maximum
-- Show natural emotion (frustration, confusion, etc.)
-- Ask for help directly
-
-Write EXACTLY like these examples:
-
-✅ GOOD EXAMPLES (USE THESE STYLES):
-"Hey, I applied for a credit card 5 days ago but haven't heard anything yet. Can you check what's going on?"
-
-"Hi, I'm getting really worried. The loan amount in the app shows ₹50,000 but I was promised ₹75,000. What happened?"
-
-"I'm still confused about the insurance coverage. Can you explain it in simpler terms? The terms and conditions are too complicated."
-
-❌ BAD EXAMPLES (NEVER USE THESE):
-"Dear valued customer, we are processing your application..."
-"As per our records, your application is under review..."
-"We appreciate your patience during this process..."
-"Best regards, [Your Name], Head of Customer Service"
-"I am writing to inform you about the status of your application..."
-"Please be advised that your request is being processed..."
-
-Remember: You are a REAL CUSTOMER with a problem. You are NOT GroMo or a support agent. Write like a normal person would talk to a customer service agent."""
-                
-                with st.spinner("Customer is responding..."):
-                    try:
-                        response = query_ollama(
-                            prompt=scenario,
-                            model="tinyllama:latest",
-                            system_prompt=system_prompt,
-                            temperature=0.7
-                        )
-                        
-                        # Initialize conversation with first customer message
-                        st.session_state.conversation = [{
-                            "role": "customer",
-                            "content": response["text"]
-                        }]
-                        st.session_state.conversation_active = True
-                        st.session_state.agent_response = ""
-                        st.session_state.customer_satisfied = False
-                        
-                        # Rerun to update the display
-                        st.experimental_rerun()
-                        
-                    except Exception as e:
-                        st.error(f"Error generating response: {str(e)}")
+    # Chat interface
+    st.markdown("### Chat Interface")
     
-    # 💬 Current Customer Message
-    if st.session_state.conversation_active:
-        last_customer_message = get_last_customer_message()
-        if last_customer_message:
-            st.markdown("### 👤 Current Customer Message")
-            st.markdown(f"> {last_customer_message}")
-            st.markdown("---")
-    
-    # 🧑‍💼 Agent Response Input
-    if st.session_state.conversation_active and not st.session_state.customer_satisfied:
-        st.markdown("### 🧑‍💼 Your Response as GroMo Partner")
-        agent_response = st.text_area(
-            "Type your response to the customer:",
-            value=st.session_state.agent_response,
-            key="agent_input",
-            height=100,
-            placeholder="Enter your response here..."
-        )
+    # Display chat history
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    # User input
+    if prompt := st.chat_input("Type your response..."):
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
         
-        col1, col2 = st.columns([1, 5])
-        with col1:
-            if st.button("Submit Response", use_container_width=True):
-                if agent_response:
-                    # Add agent response to conversation
-                    st.session_state.conversation.append({
-                        "role": "agent",
-                        "content": agent_response
-                    })
-                    
-                    # Generate feedback
-                    with st.spinner("Generating feedback..."):
-                        feedback = generate_feedback(
-                            last_customer_message,
-                            agent_response
-                        )
-                        
-                        if feedback:
-                            st.session_state.feedback = feedback
-                            
-                            # Generate next customer message
-                            with st.spinner("Customer is responding..."):
-                                next_message = generate_next_customer_message(
-                                    st.session_state.conversation,
-                                    agent_response
-                                )
-                                
-                                if next_message:
-                                    # Check if customer is satisfied
-                                    if "thank" in next_message.lower() or "satisfied" in next_message.lower():
-                                        st.session_state.customer_satisfied = True
-                                    
-                                    # Add next customer message to conversation
-                                    st.session_state.conversation.append({
-                                        "role": "customer",
-                                        "content": next_message
-                                    })
-                                    st.session_state.agent_response = ""
-                                    
-                                    # Rerun to update the display
-                                    st.experimental_rerun()
+        # Display user message
+        with st.chat_message("user"):
+            st.write(prompt)
         
-        with col2:
-            if st.button("💡 Show Suggestions", use_container_width=True):
-                st.session_state.show_suggestions = not st.session_state.show_suggestions
-    
-    # 💡 Display Suggestions
-    if st.session_state.show_suggestions and st.session_state.conversation_active:
-        st.markdown("""
-            ### 💡 Response Suggestions
-            - Acknowledge the customer's concern
-            - Explain the situation clearly
-            - Provide specific next steps
-            - Set clear expectations
-            - Offer to follow up
-        """)
-    
-    # 📝 Display Feedback
-    if st.session_state.feedback:
-        display_feedback(st.session_state.feedback)
-    
-    # 🎉 Customer Satisfaction
-    if st.session_state.customer_satisfied:
-        st.markdown("""
-            ### 🎉 Customer is Satisfied!
-            Great job! The customer's concern has been resolved.
-            You can start a new scenario to practice more.
-        """)
-    
-    # 💬 Conversation History
-    if len(st.session_state.conversation) > 1:
-        st.markdown("---")
-        st.markdown("### 💬 Conversation History")
-        # Display all messages except the latest customer message
-        for message in st.session_state.conversation[:-1]:
-            if message["role"] == "customer":
-                display_chat_message(message["content"], "customer")
-            elif message["role"] == "agent":
-                display_chat_message(message["content"], "agent")
-    
-    # 🔁 Reset Conversation
-    if st.session_state.conversation:
-        st.markdown("---")
-        if st.button("🔄 Start New Scenario", use_container_width=True):
-            st.session_state.conversation = []
-            st.session_state.feedback = None
-            st.session_state.conversation_active = False
-            st.session_state.agent_response = ""
-            st.session_state.show_suggestions = False
-            st.session_state.customer_satisfied = False
-            st.experimental_rerun() 
+        # Simulate AI response (replace with actual AI response later)
+        ai_response = "I understand you're interested in life insurance. Let me explain the different types of policies available..."
+        
+        # Add AI response to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
+        
+        # Display AI response
+        with st.chat_message("assistant"):
+            st.write(ai_response)
+
+    # Add a reset button
+    if st.button("Reset Chat"):
+        st.session_state.chat_history = []
+        st.experimental_rerun() 

@@ -1,7 +1,11 @@
 {
-  "completed_cards": [],
-  "skill_progress": {},
-  "last_card_date": "2025-05-25",
+  "completed_cards": [
+    5
+  ],
+  "skill_progress": {
+    "Sales & Negotiation": 10
+  },
+  "last_card_date": "2025-05-27",
   "streak": 0,
-  "today_card_id": 1
+  "today_card_id": 5
 }

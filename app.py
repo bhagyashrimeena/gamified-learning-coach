@@ -6,6 +6,7 @@ import plotly.express as px
 import pandas as pd
 from microlearning import show_daily_card, reset_progress
 from roleplay_chat import roleplay_chat
+import os
 
 # Set page configuration
 st.set_page_config(
@@ -41,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
+# Initialize main session state variables
 if 'user_name' not in st.session_state:
     st.session_state.user_name = None
 if 'streak_count' not in st.session_state:
@@ -50,6 +51,8 @@ if 'last_login' not in st.session_state:
     st.session_state.last_login = None
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'user_xp' not in st.session_state:
+    st.session_state.user_xp = 0
 
 def get_greeting():
     """Return appropriate greeting based on time of day"""
@@ -74,53 +77,12 @@ def update_streak():
         st.session_state.streak_count = 1
     st.session_state.last_login = today.isoformat()
 
-def main():
-    # Sidebar
-    with st.sidebar:
-        st.title("🤖 AI Learning Coach")
-        
-        if not st.session_state.user_name:
-            st.session_state.user_name = st.text_input("Enter your name to begin")
-            if st.session_state.user_name:
-                update_streak()
-        
-        if st.session_state.user_name:
-            st.write(f"Welcome back, {st.session_state.user_name}! 👋")
-            st.write(f"🔥 Current streak: {st.session_state.streak_count} days")
-            
-            st.markdown("---")
-            st.markdown("### Navigation")
-            page = st.radio(
-                "Choose a section:",
-                ["🏠 Dashboard", "📚 Daily Learning", "💬 Roleplay Practice", 
-                 "🎤 Voice Analysis", "🏆 Achievements"]
-            )
-
-    # Main content area
-    if not st.session_state.user_name:
-        st.title("Welcome to AI Learning Coach! 🎓")
-        st.markdown("""
-            Please enter your name in the sidebar to begin your learning journey.
-            This AI-powered platform will help you improve your customer service skills
-            through daily practice and personalized feedback.
-        """)
-        return
-
-    # Display greeting
-    greeting = get_greeting()
-    st.title(f"{greeting}, {st.session_state.user_name}! 🌟")
-
-    # Main content based on selected page
-    if page == "🏠 Dashboard":
-        show_dashboard()
-    elif page == "📚 Daily Learning":
-        show_daily_learning()
-    elif page == "💬 Roleplay Practice":
-        show_roleplay()
-    elif page == "🎤 Voice Analysis":
-        show_voice_analysis()
-    elif page == "🏆 Achievements":
-        show_achievements()
+def load_css():
+    """Load custom CSS for styling"""
+    css_file = os.path.join("assets", "style.css")
+    if os.path.exists(css_file):
+        with open(css_file) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 def show_dashboard():
     """Display the main dashboard with progress metrics"""
@@ -163,14 +125,14 @@ def show_roleplay():
 
 def show_voice_analysis():
     """Display the voice analysis interface"""
-    st.header("Voice Analysis 🎤")
+    st.header("🎤 Voice Analysis")
     st.markdown("Practice your speaking skills and get real-time feedback.")
     # Placeholder for voice analysis
     st.button("Start Recording")
 
 def show_achievements():
     """Display user achievements and badges"""
-    st.header("Your Achievements 🏆")
+    st.header("🏆 Your Achievements")
     # Placeholder for achievements
     st.markdown("""
         <div class="card">
@@ -182,6 +144,64 @@ def show_achievements():
             <p>Maintained a 7-day learning streak</p>
         </div>
     """, unsafe_allow_html=True)
+
+def main():
+    """Main application entry point"""
+    # Load custom CSS
+    load_css()
+
+    # Update streak
+    update_streak()
+
+    # Sidebar
+    with st.sidebar:
+        st.title("🤖 AI Learning Coach")
+
+        if not st.session_state.user_name:
+            st.session_state.user_name = st.text_input("Enter your name to begin")
+            if st.session_state.user_name:
+                update_streak()
+
+        if st.session_state.user_name:
+            st.write(f"Welcome back, {st.session_state.user_name}! 👋")
+            st.write(f"🔥 Current streak: {st.session_state.streak_count} days")
+
+            st.markdown("---")
+            st.markdown("### Navigation")
+            page = st.radio(
+                "Choose a section:",
+                ["🏠 Dashboard", "📚 Daily Learning", "💬 Roleplay Practice",
+                 "🎤 Voice Analysis", "🏆 Achievements"]
+            )
+
+    # Main content area
+    if not st.session_state.user_name:
+        st.title("Welcome to AI Learning Coach! 🎓")
+        st.markdown("""
+            Please enter your name in the sidebar to begin your learning journey.
+            This AI-powered platform will help you improve your customer service skills
+            through daily practice and personalized feedback.
+        """)
+        return
+
+    # Display greeting
+    greeting = get_greeting()
+    st.title(f"{greeting}, {st.session_state.user_name}! 🌟")
+
+    # Main content based on selected page
+    if page == "🏠 Dashboard":
+        show_dashboard()
+    elif page == "📚 Daily Learning":
+        show_daily_learning()
+    elif page == "💬 Roleplay Practice":
+        show_roleplay()
+    elif page == "🎤 Voice Analysis":
+        show_voice_analysis()
+    elif page == "🏆 Achievements":
+        show_achievements()
+
+    # Update streak at the end of the session
+    update_streak()
 
 if __name__ == "__main__":
     main() 

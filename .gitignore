@@ -4,13 +4,26 @@ __pycache__/
 *$py.class
 *.so
 .Python
-.env
-.venv
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
+env/
 ENV/
-env.bak/
-venv.bak/
 
 # IDE
 .idea/
@@ -18,11 +31,25 @@ venv.bak/
 *.swp
 *.swo
 
+# Streamlit
+.streamlit/
+
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Project specific
+# Logs
 *.log
+
+# Local development
+.env
+.env.local
+
+# Project specific
 .coverage
 htmlcov/ 

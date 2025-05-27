@@ -175,8 +175,20 @@ def reset_progress():
         st.success("Progress has been reset!")
         st.rerun()
 
+def microlearning():
+    """Main entry point for the microlearning module"""
+    st.title("📚 Daily Learning")
+    
+    # Show the daily card
+    show_daily_card()
+    
+    # Add a reset progress button in a less prominent location
+    with st.sidebar:
+        st.markdown("---")
+        with st.expander("Advanced Options"):
+            reset_progress()
+
 if __name__ == "__main__":
     # Test the module
     st.title("Microlearning Module Test")
-    show_daily_card()
-    reset_progress() 
+    microlearning()

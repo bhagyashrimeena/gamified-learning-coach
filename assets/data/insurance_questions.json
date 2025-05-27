@@ -1,0 +1,44 @@
+{
+    "module1": [
+        {
+            "question": "What is the primary purpose of insurance?",
+            "options": ["Wealth creation", "Risk transfer", "Entertainment", "Tax evasion"],
+            "answer": "Risk transfer",
+            "explanation": "Insurance primarily serves as a risk transfer mechanism, allowing individuals to protect themselves against potential financial losses."
+        },
+        {
+            "question": "Which of the following is a general insurance?",
+            "options": ["Term plan", "Health insurance", "Pension plan", "ULIP"],
+            "answer": "Health insurance",
+            "explanation": "Health insurance is a type of general insurance that covers medical expenses and healthcare costs."
+        },
+        {
+            "question": "What is the principle of utmost good faith in insurance?",
+            "options": [
+                "The insurer must pay claims immediately",
+                "Both parties must disclose all relevant information",
+                "The insured can hide pre-existing conditions",
+                "The insurer can deny any claim"
+            ],
+            "answer": "Both parties must disclose all relevant information",
+            "explanation": "The principle of utmost good faith requires both the insurer and insured to be completely honest and transparent in their dealings."
+        },
+        {
+            "question": "Which of these is NOT a type of life insurance?",
+            "options": ["Term insurance", "Health insurance", "Whole life insurance", "Endowment plan"],
+            "answer": "Health insurance",
+            "explanation": "Health insurance is a type of general insurance, not life insurance. It covers medical expenses rather than providing life coverage."
+        },
+        {
+            "question": "What is the waiting period in health insurance?",
+            "options": [
+                "Time before premium payment is due",
+                "Time before coverage begins for certain conditions",
+                "Time after which policy can be cancelled",
+                "Time before claims can be filed"
+            ],
+            "answer": "Time before coverage begins for certain conditions",
+            "explanation": "The waiting period is a specified time during which certain conditions or treatments are not covered by the health insurance policy."
+        }
+    ]
+} 
