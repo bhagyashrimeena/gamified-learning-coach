@@ -268,21 +268,23 @@ def display_transcript():
         """, unsafe_allow_html=True)
 
 def handle_voice_input(callback: Callable[[str], None]):
-    """Handle voice input and call the callback with transcribed text"""
+    """Handle voice input and call the callback with the transcript"""
     initialize_voice_state()
     inject_voice_input_js()
+    
+    # Create microphone button
     create_mic_button()
-    display_transcript()
-
-    # Listen for messages from JavaScript
+    
+    # Display transcript if available
+    if st.session_state.transcript:
+        callback(st.session_state.transcript)
+        st.session_state.transcript = ""  # Clear transcript after callback
+    
+    # Listen for transcript updates
     st.markdown("""
         <script>
         window.addEventListener('message', (event) => {
             if (event.data.type === 'transcript_update') {
-                const transcriptContent = document.getElementById('transcript-content');
-                if (transcriptContent) {
-                    transcriptContent.textContent = event.data.transcript;
-                }
                 window.parent.postMessage({
                     type: 'streamlit:setComponentValue',
                     value: event.data.transcript
@@ -290,9 +292,4 @@ def handle_voice_input(callback: Callable[[str], None]):
             }
         });
         </script>
-    """, unsafe_allow_html=True)
-
-    # Handle transcript updates
-    if st.session_state.transcript:
-        callback(st.session_state.transcript)
-        st.session_state.transcript = "" 
+    """, unsafe_allow_html=True) 

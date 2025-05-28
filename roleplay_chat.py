@@ -2,159 +2,125 @@ import streamlit as st
 from llm_utils import query_ollama, check_model_installed, MODEL_NAME
 from datetime import datetime
 from voice_utils import handle_voice_input, initialize_voice_state
+import time
+import random
 
 def initialize_roleplay_session():
     """Initialize session state variables for roleplay chat"""
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = []
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
     if "feedback" not in st.session_state:
         st.session_state.feedback = None
-    if "conversation_active" not in st.session_state:
-        st.session_state.conversation_active = False
-    if "agent_response" not in st.session_state:
-        st.session_state.agent_response = ""
-    if "show_suggestions" not in st.session_state:
-        st.session_state.show_suggestions = False
-    if "customer_satisfied" not in st.session_state:
-        st.session_state.customer_satisfied = False
-    if "scenario_input" not in st.session_state:
-        st.session_state.scenario_input = ""
-    if "agent_input" not in st.session_state:
-        st.session_state.agent_input = ""
-    if "reset_requested" not in st.session_state:
-        st.session_state.reset_requested = False
+    if "scenario" not in st.session_state:
+        st.session_state.scenario = "Customer: I'm interested in learning about life insurance options."
+    if "is_recording" not in st.session_state:
+        st.session_state.is_recording = False
+    if "model_checked" not in st.session_state:
+        st.session_state.model_checked = False
 
-def get_last_customer_message():
+def get_customer_message():
     """Get the most recent customer message from the conversation"""
-    for message in reversed(st.session_state.conversation):
+    for message in reversed(st.session_state.messages):
         if message["role"] == "customer":
             return message["content"]
     return None
 
-def display_chat_message(message, role):
-    """Display a chat message with appropriate styling"""
-    timestamp = datetime.now().strftime("%H:%M")
-    
-    if role == "customer":
-        st.markdown(f"""
-            <div style='display: flex; margin-bottom: 1rem;'>
-                <div style='background-color: #f0f2f6; padding: 1rem; border-radius: 1rem; max-width: 80%;'>
-                    <div style='color: #666; font-size: 0.8rem; margin-bottom: 0.5rem;'>👤 Customer • {timestamp}</div>
-                    <div style='color: #1f1f1f;'>{message}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    elif role == "agent":
-        st.markdown(f"""
-            <div style='display: flex; justify-content: flex-end; margin-bottom: 1rem;'>
-                <div style='background-color: #e3f2fd; padding: 1rem; border-radius: 1rem; max-width: 80%;'>
-                    <div style='color: #666; font-size: 0.8rem; margin-bottom: 0.5rem;'>🧑‍💼 You (GroMo Partner) • {timestamp}</div>
-                    <div style='color: #1f1f1f;'>{message}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+def generate_customer_response(agent_message):
+    """Generate a customer response based on the agent's message"""
+    prompt = f'''🟡 SYSTEM INSTRUCTIONS 🟡
 
-def display_feedback(feedback):
-    """Display feedback in a structured format"""
-    st.markdown("""
-        <div style='background-color: #f8f9fa; padding: 1.5rem; border-radius: 0.5rem; margin: 1rem 0;'>
-            <h3 style='color: #1f1f1f; margin-bottom: 1rem;'>🧠 Feedback on Your Response</h3>
-    """, unsafe_allow_html=True)
-    
-    # Split feedback into sections
-    sections = feedback.split('\n\n')
-    for section in sections:
-        if section.strip():
-            st.markdown(f"<div style='margin-bottom: 1rem;'>{section}</div>", unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+You are simulating a roleplay training session where the human user (GroMo partner) plays the role of an insurance advisor.
 
-def generate_next_customer_message(conversation, agent_response):
-    """Generate the next customer message based on conversation context"""
-    # Build conversation context from last 2 exchanges
-    context = "Previous conversation:\n"
-    for msg in conversation[-4:]:  # Last 2 exchanges (4 messages)
-        if msg["role"] == "customer":
-            context += f"Customer: {msg['content']}\n"
-        elif msg["role"] == "agent":
-            context += f"GroMo Partner: {msg['content']}\n"
-    
-    prompt = f'''You are a real customer, not a bot or a support agent.
-
-You are speaking casually about a real problem you are facing related to a financial product (credit card, loan, insurance etc).
+🔵 Your role is to act ONLY as the CUSTOMER in the conversation.
+Do NOT generate responses as the advisor.
+Do NOT explain insurance policies.
+Only ask questions or respond as a customer would in a realistic conversation.
 
 Previous conversation:
-{context}
+{st.session_state.scenario}
 
-GroMo Partner's latest response: {agent_response}
+GroMo Partner's latest response: {agent_message}
 
-CRITICAL INSTRUCTIONS:
-• Speak casually and simply
-• Do not use any formal or business language
-• Never act like GroMo or an agent
-• Show mild frustration, confusion, or concern
-• Use real-life language like: "hey", "hi", "what's going on?", "this is so annoying", etc.
-• Write only 2-4 lines MAXIMUM
+🎯 GOAL:
+- Train the human user (GroMo partner) to improve their ability to sell insurance and explain concepts to customers.
+- Your responses should simulate a real, slightly skeptical or curious customer who needs help making a decision.
 
-Start now:'''
+📛 NEVER switch roles or act as the advisor.
+If the user does not respond, stay silent or wait for input. Only reply to the user when they give a message.
+
+✅ EXAMPLES OF ALLOWED RESPONSES:
+- "I'm self-employed and don't have employer benefits. What kind of life insurance would work for me?"
+- "Hmm, ₹100/month feels high. Can you break that down?"
+- "Would this cover my business debts too?"
+- "That sounds good, but what happens if I miss a payment?"
+- "I'm kinda worried about the long-term commitment. What if I want to switch plans later?"
+
+❌ DO NOT:
+- Say things like: "Life insurance gives a lump sum…" or "We offer term and whole life…" — that is the advisor's job, not yours.
+- Generate replies before the user does.
+- Act as or speak for the advisor.
+
+💡 FORMAT:
+- Keep responses short (2-4 sentences)
+- Use casual, everyday language
+- Express realistic emotions (concern, confusion, skepticism)
+- Ask follow-up questions about:
+  * Cost and pricing
+  * Coverage details
+  * Contract terms
+  * Payment options
+  * Claims process
+
+Start your response now as the customer:'''
 
     try:
         response = query_ollama(
             prompt=prompt,
             model=MODEL_NAME,
-            temperature=0.7
+            temperature=0.8
         )
         return response["text"]
     except Exception as e:
         st.error(f"Error generating customer response: {str(e)}")
         return None
 
-def generate_feedback(customer_message, agent_response):
+def generate_feedback(customer_message, agent_message):
     """Generate specific, actionable feedback on the agent's response"""
-    feedback_prompt = f'''You are a customer service training evaluator for GroMo Partners.
-Evaluate the partner's response to the customer's message about financial products.
-Provide specific, actionable feedback that helps the partner improve their skills.
+    feedback_prompt = f'''You are a feedback evaluator for a roleplay-based life insurance advisor training tool. Your task is to assess the quality of a GroMo Partner's response to a customer query.
 
 Customer's message:
 {customer_message}
 
 Partner's response:
-{agent_response}
+{agent_message}
 
-Evaluate the response based on these criteria:
-1. Empathy and Tone: Is the response empathetic and respectful?
-2. Clarity and Accuracy: Does it explain the situation clearly and correctly?
-3. Action Orientation: Does it provide clear next steps or solutions?
-4. Product Knowledge: Does it demonstrate understanding of financial products?
-5. Customer Focus: Does it address the customer's specific concern?
+Evaluate the response using this scale:
+- 🌟 Excellent: Response is clear, empathetic, accurate, and provides a well-structured solution with appropriate next steps.
+- ✅ Very Good: Response is mostly clear and accurate with some helpful advice, though minor refinements are possible.
+- ⚖️ Average: Response shows understanding but lacks clarity or depth in explanation or next steps.
+- ⚠️ Needs Improvement: Response misses key aspects, provides vague or incorrect information, or lacks empathy or structure.
 
 Provide feedback in this exact structure:
 
 Overall Assessment:
-- Start with ✅ "Good response!" if effective, or ⚠️ "Needs improvement" if weak
-- Briefly explain the key strength or area needing improvement
+[Choose one rating from above]
 
 Strengths:
-- List 2 specific things the partner did well
+- List 2-3 specific things the partner did well
 - Include exact quotes from their response
-- Explain why each strength is effective for financial product support
+- Explain why each strength is effective
 
 Areas for Improvement:
-- List 2 specific areas that need improvement
+- List 1-2 specific areas that need improvement
 - Include exact quotes from their response
 - Explain what could be better
 
-Suggestions for Better Response:
-- Provide 2-3 specific example phrases the partner could use
-- Include better ways to explain financial concepts
-- Show how to handle the situation more effectively
+Checkpoint Feedback:
+- A concise, actionable summary (1-2 lines)
+- Focus on what went well and what can be improved
+- Be encouraging but direct
 
-Keep the feedback:
-- Constructive and supportive
-- Specific to financial product support
-- Focused on practical improvements
-- Clear and actionable
-- Appropriate for a learning partner'''
+Be fair and adaptive. If the response is appropriate and helpful, don't rate it as "Needs Improvement." Only use that rating when the response fails in core areas.'''
 
     try:
         feedback = query_ollama(
@@ -167,55 +133,242 @@ Keep the feedback:
         st.error(f"Error generating feedback: {str(e)}")
         return None
 
+def voice_input_callback(text):
+    """Callback function for voice input"""
+    if text:
+        st.session_state.messages.append({"role": "user", "content": text})
+        st.experimental_rerun()
+
+def load_sample_scenario():
+    """Load a sample scenario and initialize the conversation"""
+    sample_scenarios = [
+        "I'm concerned about my family's financial security. Can you explain how life insurance works?",
+        "I've been thinking about getting life insurance, but I'm not sure if I really need it. What are the benefits?",
+        "My friend mentioned term life insurance is cheaper. What's the difference between term and whole life?",
+        "I'm worried about leaving my family with debt if something happens to me. How can life insurance help?",
+        "I'm self-employed and don't have any employer benefits. What kind of life insurance would work for me?"
+    ]
+    
+    # Select a random scenario
+    sample_scenario = random.choice(sample_scenarios)
+    st.session_state.scenario = f"Customer: {sample_scenario}"
+    
+    # Initialize conversation with the sample scenario
+    st.session_state.messages = [{"role": "customer", "content": sample_scenario}]
+    st.session_state.feedback = None
+
 def roleplay_chat():
     """Display the roleplay chat interface"""
-    st.header("💬 Roleplay Practice")
+    st.title("💬 Roleplay Practice")
     
-    # Initialize chat history in session state if it doesn't exist
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-
+    # Initialize session state
+    initialize_roleplay_session()
+    
+    # Check if model is installed
+    if not st.session_state.model_checked:
+        with st.spinner("Checking LLM model..."):
+            if not check_model_installed(model_name=MODEL_NAME):
+                st.error(f"⚠️ Required LLM model '{MODEL_NAME}' not found. Please install it first.")
+                if st.button("Install Model"):
+                    with st.spinner(f"Installing {MODEL_NAME}..."):
+                        try:
+                            # Add model installation logic here
+                            st.success(f"Model {MODEL_NAME} installed successfully!")
+                            st.session_state.model_checked = True
+                            st.experimental_rerun()
+                        except Exception as e:
+                            st.error(f"Failed to install model: {str(e)}")
+                return
+            st.session_state.model_checked = True
+    
+    # Custom CSS for better chat UI
+    st.markdown("""
+        <style>
+        /* Chat message container */
+        .stChatMessage {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Customer message styling */
+        .stChatMessage[data-testid="stChatMessage"][data-role="customer"] {
+            background-color: #f0f2f6;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="customer"] .stChatMessageContent {
+            background-color: #f0f2f6;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="customer"] .stChatMessageContent p {
+            color: #1f1f1f;
+        }
+        
+        /* Assistant message styling */
+        .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] {
+            background-color: #e3f2fd;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] .stChatMessageContent {
+            background-color: #e3f2fd;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] .stChatMessageContent p {
+            color: #1f1f1f;
+        }
+        
+        /* User message styling */
+        .stChatMessage[data-testid="stChatMessage"][data-role="user"] {
+            background-color: #e8f5e9;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="user"] .stChatMessageContent {
+            background-color: #e8f5e9;
+        }
+        
+        .stChatMessage[data-testid="stChatMessage"][data-role="user"] .stChatMessageContent p {
+            color: #1f1f1f;
+        }
+        
+        /* Feedback container styling */
+        .feedback-container {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .feedback-container p {
+            color: #1f1f1f;
+            margin: 0.5rem 0;
+        }
+        
+        /* Rating emoji styling */
+        .rating-emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .stChatMessage[data-testid="stChatMessage"][data-role="customer"] {
+                background-color: #2d3748;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="customer"] .stChatMessageContent {
+                background-color: #2d3748;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="customer"] .stChatMessageContent p {
+                color: #e2e8f0;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] {
+                background-color: #2c5282;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] .stChatMessageContent {
+                background-color: #2c5282;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] .stChatMessageContent p {
+                color: #e2e8f0;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="user"] {
+                background-color: #2f855a;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="user"] .stChatMessageContent {
+                background-color: #2f855a;
+            }
+            
+            .stChatMessage[data-testid="stChatMessage"][data-role="user"] .stChatMessageContent p {
+                color: #e2e8f0;
+            }
+            
+            .feedback-container {
+                background-color: #2d3748;
+                border-color: #4a5568;
+            }
+            
+            .feedback-container p {
+                color: #e2e8f0;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Scenario selection
-    with st.expander("Select a Scenario", expanded=True):
-        scenario = st.text_area(
+    with st.expander("📝 Scenario Setup", expanded=True):
+        st.session_state.scenario = st.text_area(
             "Enter your scenario or choose from predefined ones:",
-            value="Customer: I'm interested in learning about life insurance options.",
+            value=st.session_state.scenario,
             height=100
         )
         
-        # Add predefined scenarios
-        if st.button("Load Sample Scenario"):
-            scenario = "Customer: I'm concerned about my family's financial security. Can you explain how life insurance works?"
-            st.experimental_rerun()
-
-    # Chat interface
-    st.markdown("### Chat Interface")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Load Sample Scenario"):
+                with st.spinner("Loading sample scenario..."):
+                    load_sample_scenario()
+                    st.experimental_rerun()
+        
+        with col2:
+            if st.button("Reset Chat"):
+                st.session_state.messages = []
+                st.session_state.feedback = None
+                st.experimental_rerun()
     
-    # Display chat history
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-
-    # User input
-    if prompt := st.chat_input("Type your response..."):
-        # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        
-        # Display user message
-        with st.chat_message("user"):
-            st.write(prompt)
-        
-        # Simulate AI response (replace with actual AI response later)
-        ai_response = "I understand you're interested in life insurance. Let me explain the different types of policies available..."
-        
-        # Add AI response to chat history
-        st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
-        
-        # Display AI response
-        with st.chat_message("assistant"):
-            st.write(ai_response)
-
-    # Add a reset button
-    if st.button("Reset Chat"):
-        st.session_state.chat_history = []
-        st.experimental_rerun() 
+    # Display chat messages
+    for message in st.session_state.messages:
+        role = message["role"]
+        with st.chat_message(role):
+            st.markdown(f"""
+                <div data-role="{role}">
+                    {message["content"]}
+                </div>
+            """, unsafe_allow_html=True)
+    
+    # Voice input button
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🎤 Voice Input", key="voice_input"):
+            st.session_state.is_recording = True
+            with st.spinner("Recording..."):
+                try:
+                    handle_voice_input(callback=voice_input_callback)
+                except Exception as e:
+                    st.error(f"Voice input error: {str(e)}")
+                    st.session_state.is_recording = False
+    
+    # Text input
+    with col2:
+        if prompt := st.chat_input("Type your response..."):
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Generate customer response
+            with st.spinner("Customer is typing..."):
+                customer_response = generate_customer_response(prompt)
+                if customer_response:
+                    st.session_state.messages.append({"role": "customer", "content": customer_response})
+            
+            # Generate feedback
+            with st.spinner("Generating feedback..."):
+                feedback = generate_feedback(customer_response, prompt)
+                if feedback:
+                    st.session_state.feedback = feedback
+            
+            st.experimental_rerun()
+    
+    # Display feedback if available
+    if st.session_state.feedback:
+        st.markdown("### 📝 Feedback")
+        st.markdown(f"""
+            <div class="feedback-container">
+                {st.session_state.feedback}
+            </div>
+        """, unsafe_allow_html=True) 
